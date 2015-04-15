@@ -254,6 +254,15 @@ tCmdLineEntry g_psCmdTable[] =
 //"                     will not automatically reconnect to the network." },
     {"ping",          CMD_ping,
                   " : ping the gateway, usually 192.168.1.1"},
+    {"who",          CMD_who,
+                  " : display the IP address of your client and the address you are using for the server"},
+    {"server",          CMD_server,
+                  " : specify IP address of the server"},
+    {"ask",          CMD_ask,
+                  " : send a question to the server"},
+    {"debug",          CMD_debug,
+                  " : send 10-100 messages for profiling"},
+		
     { 0, 0, 0 }
 };
 
@@ -469,7 +478,92 @@ CMD_help(int argc, char **argv)
 
     return(0);
 }
+int is_valid_ip(const char* str) {
+	int ind = 0;
+	while (str[ind]){
+		if ((str[ind] >= '0' && str[ind] <= '9') || str[ind] == '.'){
+			UARTprintf("Good case: %c\n", str[ind]);
+			
+		} else {
+			UARTprintf("Bad case: %c\n", str[ind]);
+			
+		}
+		++ind;
+	}
+}
+//
+int
+CMD_ask(int argc, char **argv){
+	UARTprintf("Asking...\n");
+	// TODO - ask a question here
+	return 0;
+}
+int CMD_server(int argc, char **argv) {
+	UARTprintf("Server...\n");
+	if (argc < 2) {
+		UARTprintf("IP argument required.\n");
+	} else {
+		UARTprintf("Attempting to connect to server %s...\n", argv[1]);
+		int bob = is_valid_ip(argv[1]);
+	}
+	return 0;
+}
 
+int CMD_who(int argc, char **argv) {  
+	_NetCfgIpV4Args_t ipV4;
+
+	unsigned char len = sizeof(_NetCfgIpV4Args_t);;
+	unsigned char IsDHCP = 0;
+
+	UARTprintf("Whoing...\n");
+	/* Read the IP parameter */
+	sl_NetCfgGet(SL_IPV4_STA_P2P_CL_GET_INFO,&IsDHCP,&len,
+					(unsigned char *)&ipV4);
+	UARTprintf("Server IP: %d.%d.%d.%d  Port: %d\n\n",
+      SL_IPV4_BYTE(IP_ADDR,3), SL_IPV4_BYTE(IP_ADDR,2), 
+      SL_IPV4_BYTE(IP_ADDR,1), SL_IPV4_BYTE(IP_ADDR,0),PORT_NUM);
+  UARTprintf("This node is at IP: %d.%d.%d.%d\n",
+		SL_IPV4_BYTE(ipV4.ipV4,3), SL_IPV4_BYTE(ipV4.ipV4,2),
+		SL_IPV4_BYTE(ipV4.ipV4,1), SL_IPV4_BYTE(ipV4.ipV4,0));
+	return 0;
+}
+int CMD_debug(int argc, char **argv){
+  SlSockAddrIn_t    Addr;
+	uint16_t AddrSize = 0;
+	int16_t SockID = 0;
+	int16_t Status = 1;
+	uint32_t data;
+	uint8_t count = 0;
+
+	Addr.sin_family = SL_AF_INET;
+	Addr.sin_port = sl_Htons((UINT16)PORT_NUM);
+	Addr.sin_addr.s_addr = sl_Htonl((UINT32)IP_ADDR);
+	AddrSize = sizeof(SlSockAddrIn_t);
+	SockID = sl_Socket(SL_AF_INET,SL_SOCK_DGRAM, 0);if( SockID < 0 ){
+		UARTprintf("SockIDerror ");
+		Status = -1; // error
+	}else{
+		while(Status>0 && count < 100){
+			UARTprintf("\nSending a UDP packet ...");
+			uBuf[0] = ATYPE;   // defines this as an analog data type
+			uBuf[1] = '='; 
+			Int2Str(data,(char*)&uBuf[2]); // [2] to [7] is 6 digit number
+			UARTprintf(" %s ",uBuf);
+			LED_Toggle();
+			Status = sl_SendTo(SockID, uBuf, BUF_SIZE, 0,
+											 (SlSockAddr_t *)&Addr, AddrSize);
+			ROM_SysCtlDelay(ROM_SysCtlClockGet() / 25); // 80ms
+			if( Status <= 0 ){
+				UARTprintf("SockIDerror %d ",Status);
+			}else{
+			 UARTprintf("ok");
+			 ++count;
+			}     
+		}
+		sl_Close(SockID);
+	}
+
+}
 //*****************************************************************************
 //
 // Ping an IP Address
@@ -905,7 +999,8 @@ int main(void)
             (unsigned char *)&ipV4);
 
     //Print the IP
-    UARTprintf("This node is at IP: %d.%d.%d.%d\n",  SL_IPV4_BYTE(ipV4.ipV4,3), SL_IPV4_BYTE(ipV4.ipV4,2), SL_IPV4_BYTE(ipV4.ipV4,1), SL_IPV4_BYTE(ipV4.ipV4,0));
+    UARTprintf("This node is at IP: %d.%d.%d.%d\n",  SL_IPV4_BYTE(ipV4.ipV4,3), SL_IPV4_BYTE(ipV4.ipV4,2),
+			SL_IPV4_BYTE(ipV4.ipV4,1), SL_IPV4_BYTE(ipV4.ipV4,0));
 
     //
     // Loop forever waiting  for commands from PC...

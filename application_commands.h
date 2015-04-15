@@ -89,5 +89,9 @@ extern int CMD_deletePolicy (int argc, char **argv);
 extern int CMD_mdnsadvertise (int argc, char **argv);
 extern int CMD_cc3000reset (int argc, char **argv);
 extern int CMD_ping (int argc, char **argv);
+extern int CMD_who (int argc, char **argv);
+extern int CMD_server (int argc, char **argv);
+extern int CMD_ask (int argc, char **argv);
+extern int CMD_debug (int argc, char **argv);
 
 #endif // __APPLICATION_COMMANDS_H__
