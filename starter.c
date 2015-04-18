@@ -505,28 +505,21 @@ CMD_ask(int argc, char **argv){
 	// start as "%d.%d<", SL_IPV4_BYTE(IP_ADDR,1), SL_IPV4_BYTE(IP_ADDR,0)
 	_NetCfgIpV4Args_t ipV4;
 
-	unsigned char len = sizeof(_NetCfgIpV4Args_t);;
+	unsigned char len = sizeof(_NetCfgIpV4Args_t);
 	unsigned char IsDHCP = 0;
 
 	/* Read the IP parameter */
 	sl_NetCfgGet(SL_IPV4_STA_P2P_CL_GET_INFO,&IsDHCP,&len,
 					(unsigned char *)&ipV4);
-	int total_mem = 10;
-	int index = 6;
+	sprintf(moreBuf, "%lu.%lu<", SL_IPV4_BYTE(ipV4.ipV4,1), SL_IPV4_BYTE(ipV4.ipV4,0));
+	int index = strlen(moreBuf);
 	for (int i = 1; i < argc; ++i){
-		// include extra for space and null at end
-		total_mem += strlen(argv[i]) + 1;
-	}
-	for (int i = 1; i < argc; ++i){
-		if (i==1){
-			sprintf(moreBuf, "%lu.%lu<%s", SL_IPV4_BYTE(ipV4.ipV4,1), SL_IPV4_BYTE(ipV4.ipV4,0), argv[i]);
-			
-		} else {
 			sprintf(&moreBuf[index], "%s ", argv[i]);
 			index += strlen(argv[i]) + 1;
-		}
 	}
-	SlSockAddrIn_t    Addr, LocalAddr;
+	// get rid of last space
+	moreBuf[index-1] = 0;
+	SlSockAddrIn_t Addr, LocalAddr;
 	uint16_t AddrSize = 0;
 	int16_t SockID = 0;
 	int16_t Status = 1;
@@ -545,15 +538,16 @@ CMD_ask(int argc, char **argv){
 		UARTprintf("\nSending a UDP packet ...\n");
 		UARTprintf("%s\n",moreBuf);
 		LED_Toggle();
+		UARTprintf("sizeof(moreBuf): %u\n", sizeof(moreBuf));
 		Status = sl_SendTo(SockID, moreBuf, sizeof(moreBuf), 0,
 										 (SlSockAddr_t *)&Addr, AddrSize);
+		sl_Close(SockID);
 		ROM_SysCtlDelay(ROM_SysCtlClockGet() / 25); // 80ms
 		if( Status <= 0 ){
 			UARTprintf("SockIDerror %d ",Status);
 		}else{
 		 UARTprintf("ok\n");
 		} 
-		sl_Close(SockID);
 		
 		// receive code
 		LocalAddr.sin_family = SL_AF_INET;
