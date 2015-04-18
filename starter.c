@@ -44,6 +44,8 @@
 #include "ADCSWTrigger.h"
 #include "LaunchPadSwitches.h"
 #include "ST7735.h"
+#include <stdlib.h>
+#include <stdio.h>
 
 //*****************************************************************************
 //! \addtogroup example_list
@@ -63,6 +65,7 @@
 #define IP_ADDR         0xc0a80064   // 192=0xC0, 168=0xa8, 0x00=0, 0x65 = 101
 #define PORT_NUM        5001         // Port number to be used 
 #define BUF_SIZE        12
+#define RESP_BUF_SIZE		256
 #define SENSORNODE 0       // true if this node is sending UDP packets, using client
 #define DISPLAYNODE 0      // true if this node is receiving UDP packets, using server
 #define CRTNODE 1          // true if this node is runs an intepreter on UART0
@@ -75,6 +78,7 @@
 }e_Stauts;*/
 
 UINT8 uBuf[BUF_SIZE];  // payload
+char moreBuf[RESP_BUF_SIZE];
 
 
 #define UNUSED(x) (x = x)
@@ -494,8 +498,94 @@ int is_valid_ip(const char* str) {
 //
 int
 CMD_ask(int argc, char **argv){
-	UARTprintf("Asking...\n");
-	// TODO - ask a question here
+	if (argc < 2) {
+		UARTprintf("Please include a question to ask.\n");
+		return 1;
+	} 
+	// start as "%d.%d<", SL_IPV4_BYTE(IP_ADDR,1), SL_IPV4_BYTE(IP_ADDR,0)
+	_NetCfgIpV4Args_t ipV4;
+
+	unsigned char len = sizeof(_NetCfgIpV4Args_t);;
+	unsigned char IsDHCP = 0;
+
+	/* Read the IP parameter */
+	sl_NetCfgGet(SL_IPV4_STA_P2P_CL_GET_INFO,&IsDHCP,&len,
+					(unsigned char *)&ipV4);
+	int total_mem = 10;
+	int index = 6;
+	for (int i = 1; i < argc; ++i){
+		// include extra for space and null at end
+		total_mem += strlen(argv[i]) + 1;
+	}
+	for (int i = 1; i < argc; ++i){
+		if (i==1){
+			sprintf(moreBuf, "%lu.%lu<%s", SL_IPV4_BYTE(ipV4.ipV4,1), SL_IPV4_BYTE(ipV4.ipV4,0), argv[i]);
+			
+		} else {
+			sprintf(&moreBuf[index], "%s ", argv[i]);
+			index += strlen(argv[i]) + 1;
+		}
+	}
+	SlSockAddrIn_t    Addr, LocalAddr;
+	uint16_t AddrSize = 0;
+	int16_t SockID = 0;
+	int16_t Status = 1;
+	uint32_t data;
+	uint8_t count = 0;
+
+	Addr.sin_family = SL_AF_INET;
+	Addr.sin_port = sl_Htons((UINT16)PORT_NUM);
+	Addr.sin_addr.s_addr = sl_Htonl((UINT32)IP_ADDR);
+	AddrSize = sizeof(SlSockAddrIn_t);
+	SockID = sl_Socket(SL_AF_INET,SL_SOCK_DGRAM, 0);
+	if( SockID < 0 ){
+		UARTprintf("SockIDerror ");
+		Status = -1; // error
+	}else{
+		UARTprintf("\nSending a UDP packet ...\n");
+		UARTprintf("%s\n",moreBuf);
+		LED_Toggle();
+		Status = sl_SendTo(SockID, moreBuf, sizeof(moreBuf), 0,
+										 (SlSockAddr_t *)&Addr, AddrSize);
+		ROM_SysCtlDelay(ROM_SysCtlClockGet() / 25); // 80ms
+		if( Status <= 0 ){
+			UARTprintf("SockIDerror %d ",Status);
+		}else{
+		 UARTprintf("ok\n");
+		} 
+		sl_Close(SockID);
+		
+		// receive code
+		LocalAddr.sin_family = SL_AF_INET;
+		LocalAddr.sin_port = sl_Htons((UINT16)PORT_NUM);
+		LocalAddr.sin_addr.s_addr = 0;
+		uint32_t LocalAddrSize;
+		LocalAddrSize = sizeof(SlSockAddrIn_t);
+		SockID = sl_Socket(SL_AF_INET,SL_SOCK_DGRAM, 0);     
+		if( SockID < 0 ){
+			UARTprintf("SockIDerror\n");
+			Status = -1; // error
+		}else{
+			Status = sl_Bind(SockID, (SlSockAddr_t *)&LocalAddr, LocalAddrSize);
+			if( Status < 0 ){
+				UARTprintf("Sock Bind error\n");
+				sl_Close(SockID); 
+			}else{
+				Status = sl_RecvFrom(SockID, moreBuf, RESP_BUF_SIZE, 0,
+								(SlSockAddr_t *)&LocalAddr, (SlSocklen_t*)&LocalAddrSize );
+				UARTprintf("Status: %d\n", Status);
+				if( Status <= 0 ){
+					sl_Close(SockID);
+					UARTprintf("Receive error %d ",Status);
+				}else{ // successful receive
+					LED_Toggle();
+					sl_Close(SockID);
+					UARTprintf("ok %s ",moreBuf);
+				}
+			}
+		}
+	}
+//	free(question);
 	return 0;
 }
 int CMD_server(int argc, char **argv) {
