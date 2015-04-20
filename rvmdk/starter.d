@@ -40,3 +40,5 @@
 .\rvmdk\starter.o: ADCSWTrigger.h
 .\rvmdk\starter.o: LaunchPadSwitches.h
 .\rvmdk\starter.o: ST7735.h
+.\rvmdk\starter.o: C:\Keil\ARM\ARMCC\bin\..\include\stdlib.h
+.\rvmdk\starter.o: C:\Keil\ARM\ARMCC\bin\..\include\stdio.h

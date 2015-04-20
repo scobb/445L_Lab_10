@@ -599,14 +599,19 @@ int CMD_server(int argc, char **argv) {
 		while (argv[1][ind] != '.' && argv[1][ind]){
 			b[j++] = argv[1][ind++];
 		}
-		if (j == 0){
+		if (j == 0 || j > 3){
 			printf("Incorrectly formatted IP address.\n");
 			return 3;
 		}
 		++ind;
 		b[j] = 0;
 		char* end = &b[0];
-		new_addr += strtol(b, &end, 10) << (24-8*i);
+		long val = strtol(b, &end, 10);
+		if (val < 0){
+			printf("Could not parse IP address.\n");
+			return 4;
+		}
+		new_addr += val << (24-8*i);
 		if (end < &b[j]){
 			UARTprintf("Could not parse IP address.\n");
 			return 1;
