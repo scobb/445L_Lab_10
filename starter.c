@@ -600,7 +600,7 @@ int CMD_server(int argc, char **argv) {
 			b[j++] = argv[1][ind++];
 		}
 		if (j == 0 || j > 3){
-			printf("Incorrectly formatted IP address.\n");
+			UARTprintf("Incorrectly formatted IP address.\n");
 			return 3;
 		}
 		++ind;
@@ -608,7 +608,7 @@ int CMD_server(int argc, char **argv) {
 		char* end = &b[0];
 		long val = strtol(b, &end, 10);
 		if (val < 0){
-			printf("Could not parse IP address.\n");
+			UARTprintf("Could not parse IP address.\n");
 			return 4;
 		}
 		new_addr += val << (24-8*i);
