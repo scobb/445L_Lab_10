@@ -599,14 +599,17 @@ int CMD_server(int argc, char **argv) {
 		while (argv[1][ind] != '.' && argv[1][ind]){
 			b[j++] = argv[1][ind++];
 		}
+		++ind;
 		b[j] = 0;
-		char* end;
-		new_addr += strtol(b, &end, 10) << (6-2*i);
+		char* end = &b[0];
+		new_addr += strtol(b, &end, 10) << (24-8*i);
 		if (end < &b[j]){
 			UARTprintf("Could not parse IP address.\n");
 			return 1;
 		}
 	}
+	IP_ADDR = new_addr;
+	UARTprintf("Server updated to %s.\n", argv[1]);
 		
 	return 0;
 }
