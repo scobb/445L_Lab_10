@@ -599,6 +599,10 @@ int CMD_server(int argc, char **argv) {
 		while (argv[1][ind] != '.' && argv[1][ind]){
 			b[j++] = argv[1][ind++];
 		}
+		if (j == 0){
+			printf("Incorrectly formatted IP address.\n");
+			return 3;
+		}
 		++ind;
 		b[j] = 0;
 		char* end = &b[0];
