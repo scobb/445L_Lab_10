@@ -46,6 +46,7 @@
 #include "ST7735.h"
 #include <stdlib.h>
 #include <stdio.h>
+//#include <stdint.h>
 
 //*****************************************************************************
 //! \addtogroup example_list
@@ -62,7 +63,7 @@
 #define ATYPE 'a'            // used by client to tag USP packet
 /* IP addressed of server side socket.
  * Should be in long format, E.g: 0xc0a80164 == 192.168.0.101 */
-#define IP_ADDR         0xc0a80064   // 192=0xC0, 168=0xa8, 0x00=0, 0x65 = 101
+//#define IP_ADDR         0xc0a80064   // 192=0xC0, 168=0xa8, 0x00=0, 0x65 = 101
 #define PORT_NUM        5001         // Port number to be used 
 #define BUF_SIZE        12
 #define RESP_BUF_SIZE		256
@@ -71,6 +72,7 @@
 #define CRTNODE 1          // true if this node is runs an intepreter on UART0
 #define EKG 1              // client simulates ekg instead of measuring ADC
 #define ADC 0              // client gets data from ADC, Ain7 = PD0
+unsigned long IP_ADDR = 0xc0a80064;
 /*enum
 {
     CONNECTED = 0x1,
@@ -586,10 +588,26 @@ int CMD_server(int argc, char **argv) {
 	UARTprintf("Server...\n");
 	if (argc < 2) {
 		UARTprintf("IP argument required.\n");
-	} else {
-		UARTprintf("Attempting to connect to server %s...\n", argv[1]);
-		int bob = is_valid_ip(argv[1]);
+		return 2;
 	}
+	UARTprintf("Attempting to connect to server %s...\n", argv[1]);
+	int ind = 0;
+	char b[5];
+	unsigned long new_addr = 0;
+	for (int i = 0; i < 4; ++i){
+		int j = 0;
+		while (argv[1][ind] != '.' && argv[1][ind]){
+			b[j++] = argv[1][ind++];
+		}
+		b[j] = 0;
+		char* end;
+		new_addr += strtol(b, &end, 10) << (6-2*i);
+		if (end < &b[j]){
+			UARTprintf("Could not parse IP address.\n");
+			return 1;
+		}
+	}
+		
 	return 0;
 }
 
